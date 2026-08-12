@@ -58,11 +58,22 @@
 <div class="row">
   <div class="field">
     <label>Client</label>
-    <select id="task-client"><option value="">No client</option></select>
+    <select id="task-client" onchange="populateAddinKeyContactSelect()"><option value="">No client</option></select>
   </div>
   <div class="field">
     <label>Priority</label>
     <select id="task-priority"></select>
+  </div>
+</div>
+
+<div class="row">
+  <div class="field" id="task-keycontact-wrap" style="display:none;">
+    <label>Key Contact</label>
+    <select id="task-keycontact"><option value="">No key contact</option></select>
+  </div>
+  <div class="field">
+    <label>Category</label>
+    <select id="task-category"><option value="">No category</option></select>
   </div>
 </div>
 
@@ -85,7 +96,7 @@
 <button class="btn btn-primary" id="create-btn" onclick="createTask()">Create Task</button>
 <div class="status" id="status-msg"></div>
 
-<div style="text-align:center;font-size:10px;color:#bbb;margin-top:16px;">App Version: 1.0.8</div>
+<div style="text-align:center;font-size:10px;color:#bbb;margin-top:16px;">App Version: 1.0.9</div>
 
 <script>
 const SERVER = 'http://127.0.0.1:5678';
@@ -190,6 +201,16 @@ async function loadConfig() {
       priSel.appendChild(opt);
     });
 
+    // Categories
+    const catSel = document.getElementById('task-category');
+    (config.categories || []).forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id; opt.textContent = c.name;
+      catSel.appendChild(opt);
+    });
+
+    populateAddinKeyContactSelect();
+
     // Task statuses
     const statusSel = document.getElementById('task-status');
     statusSel.innerHTML = '';
@@ -201,6 +222,21 @@ async function loadConfig() {
   } catch(e) {
     console.error('Failed to load config:', e);
   }
+}
+
+function populateAddinKeyContactSelect() {
+  const clientId = document.getElementById('task-client').value;
+  const wrap = document.getElementById('task-keycontact-wrap');
+  const sel = document.getElementById('task-keycontact');
+  const client = (config.clients || []).find(c => c.id === clientId);
+  const reqs = (client && client.requesters) ? client.requesters : [];
+  wrap.style.display = reqs.length ? '' : 'none';
+  sel.innerHTML = '<option value="">No key contact</option>';
+  reqs.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id; opt.textContent = r.name;
+    sel.appendChild(opt);
+  });
 }
 
 function prefillFromEmail() {
@@ -325,6 +361,7 @@ async function createTask() {
       }
     }
 
+    const keyContactVal = document.getElementById('task-keycontact').value;
     const task = {
       title,
       client:      document.getElementById('task-client').value || '',
@@ -332,6 +369,8 @@ async function createTask() {
       taskStatus:  document.getElementById('task-status').value || '',
       due:         document.getElementById('task-due').value || '',
       description: document.getElementById('task-desc').value.trim(),
+      requesters:  keyContactVal ? [keyContactVal] : [],
+      category:    document.getElementById('task-category').value || '',
       links,
     };
 
